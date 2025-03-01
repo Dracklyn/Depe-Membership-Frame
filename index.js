@@ -5,6 +5,9 @@ const axios = require('axios');
 const app = express();
 const port = 3000;
 
+// Primary domain for Vercel
+const DEPLOYED_URL = 'https://depe-membership-frame.vercel.app';
+
 app.use(express.json());
 app.use(express.static('views'));
 
@@ -22,12 +25,13 @@ const ERC20_ABI = ['function balanceOf(address) view returns (uint256)'];
 
 // Initial Frame
 app.get('/', (req, res) => {
+  console.log('Serving initial frame');
   res.sendFile(__dirname + '/views/frame.html');
 });
 
 // Handle Frame POST requests
 app.post('/', async (req, res) => {
-  console.log('POST request received:', req.body); // Debugging
+  console.log('POST request received:', JSON.stringify(req.body, null, 2));
   const { untrustedData } = req.body;
   const buttonId = untrustedData?.buttonIndex;
   const walletAddress = untrustedData?.address;
@@ -68,6 +72,8 @@ app.post('/', async (req, res) => {
 
 // Generate Frame HTML
 function generateFrame(message, buttonText) {
+  const postUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : DEPLOYED_URL;
+  console.log(`Generating frame with postUrl: ${postUrl}`);
   return `
     <!DOCTYPE html>
     <html>
@@ -75,7 +81,7 @@ function generateFrame(message, buttonText) {
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png" />
         <meta property="fc:frame:button:1" content="${buttonText}" />
-        <meta property="fc:frame:post_url" content="${process.env.VERCEL_URL || 'http://localhost:3000'}" />
+        <meta property="fc:frame:post_url" content="${postUrl}" />
       </head>
     </html>
   `;
