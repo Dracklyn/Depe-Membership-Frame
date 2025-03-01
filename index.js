@@ -27,34 +27,41 @@ app.get('/', (req, res) => {
 
 // Handle Frame POST requests
 app.post('/', async (req, res) => {
+  console.log('POST request received:', req.body); // Debugging
   const { untrustedData } = req.body;
   const buttonId = untrustedData?.buttonIndex;
   const walletAddress = untrustedData?.address;
 
   if (!buttonId) {
+    console.log('No buttonId, returning error');
     return res.send(generateFrame('Something went wrong. Try again.', 'Request to Join'));
   }
 
   if (buttonId === 1) {
-    // Button 1: Request to Join
+    console.log('Button 1 clicked, walletAddress:', walletAddress);
     if (!walletAddress) {
+      console.log('No wallet address, prompting connection');
       return res.send(generateFrame('Please connect your wallet', 'Request to Join'));
     }
 
-    const provider = new ethers.providers.JsonRpcProvider(DEGEN_RPC_URL);
-    const contract = new ethers.Contract(DEPE_CONTRACT_ADDRESS, ERC20_ABI, provider);
-    const balance = await contract.balanceOf(walletAddress);
-    const balanceInTokens = ethers.utils.formatUnits(balance, 18);
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(DEGEN_RPC_URL);
+      const contract = new ethers.Contract(DEPE_CONTRACT_ADDRESS, ERC20_ABI, provider);
+      const balance = await contract.balanceOf(walletAddress);
+      const balanceInTokens = ethers.utils.formatUnits(balance, 18);
+      console.log(`Balance for ${walletAddress}: ${balanceInTokens} DEPE`);
 
-    if (parseFloat(balanceInTokens) >= 50) {
-      try {
+      if (parseFloat(balanceInTokens) >= 50) {
+        console.log('Balance sufficient, sending invite');
         await sendChannelInvite(walletAddress);
         return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Request to Join'));
-      } catch (error) {
-        return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join'));
+      } else {
+        console.log('Insufficient balance');
+        return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Request to Join'));
       }
-    } else {
-      return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Request to Join'));
+    } catch (error) {
+      console.error('Error in POST handler:', error.message);
+      return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join'));
     }
   }
 });
@@ -66,8 +73,9 @@ function generateFrame(message, buttonText) {
     <html>
       <head>
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png?text=${encodeURIComponent(message)}" />
+        <meta property="fc:frame:image" content="https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png" />
         <meta property="fc:frame:button:1" content="${buttonText}" />
+        <meta property="fc:frame:post_url" content="${process.env.VERCEL_URL || 'http://localhost:3000'}" />
       </head>
     </html>
   `;
@@ -83,6 +91,7 @@ async function sendChannelInvite(walletAddress) {
     throw new Error('Could not find FID for this wallet address');
   }
   const userFid = userData.fid;
+  console.log(`FID for ${walletAddress}: ${userFid}`);
 
   const response = await axios.post(
     'https://api.warpcast.com/fc/channel-invites',
@@ -99,6 +108,7 @@ async function sendChannelInvite(walletAddress) {
       },
     }
   );
+  console.log('Invite sent successfully');
   return response.data;
 }
 
