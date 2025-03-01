@@ -66,7 +66,7 @@ function generateFrame(message, buttonText) {
     <html>
       <head>
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://via.placeholder.com/600x400?text=${encodeURIComponent(message)}" />
+        <meta property="fc:frame:image" content="https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png?text=${encodeURIComponent(message)}" />
         <meta property="fc:frame:button:1" content="${buttonText}" />
       </head>
     </html>
