@@ -38,14 +38,14 @@ app.post('/', async (req, res) => {
 
   if (!buttonId) {
     console.log('No buttonId, returning error');
-    return res.send(generateFrame('Something went wrong. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png?text=Error'));
+    return res.send(generateFrame('Something went wrong. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png'));
   }
 
   if (buttonId === 1) {
     console.log('Button 1 clicked, walletAddress:', walletAddress);
     if (!walletAddress) {
       console.log('No wallet address, prompting connection');
-      return res.send(generateFrame('Please connect your wallet', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg?text=Connect+Wallet'));
+      return res.send(generateFrame('Connect your wallet in Warpcast first!', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg'));
     }
 
     try {
@@ -59,14 +59,14 @@ app.post('/', async (req, res) => {
       if (parseFloat(balanceInTokens) >= 50) {
         console.log('Balance sufficient, sending invite');
         await sendChannelInvite(walletAddress);
-        return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Done', 'https://via.placeholder.com/600x400?text=Invite+Sent'));
+        return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Done', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg?text=Invite+Sent'));
       } else {
         console.log('Insufficient balance');
         return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Try Again', 'https://via.placeholder.com/600x400?text=Insufficient+Balance'));
       }
     } catch (error) {
       console.error('Error in POST handler:', error.message);
-      return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join', 'https://via.placeholder.com/600x400?text=Error'));
+      return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg?text=Error'));
     }
   }
 });
