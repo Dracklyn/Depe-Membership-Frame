@@ -38,17 +38,18 @@ app.post('/', async (req, res) => {
 
   if (!buttonId) {
     console.log('No buttonId, returning error');
-    return res.send(generateFrame('Something went wrong. Try again.', 'Request to Join'));
+    return res.send(generateFrame('Something went wrong. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png?text=Error'));
   }
 
   if (buttonId === 1) {
     console.log('Button 1 clicked, walletAddress:', walletAddress);
     if (!walletAddress) {
       console.log('No wallet address, prompting connection');
-      return res.send(generateFrame('Please connect your wallet', 'Request to Join'));
+      return res.send(generateFrame('Please connect your wallet', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg?text=Connect+Wallet'));
     }
 
     try {
+      console.log('Checking balance...');
       const provider = new ethers.providers.JsonRpcProvider(DEGEN_RPC_URL);
       const contract = new ethers.Contract(DEPE_CONTRACT_ADDRESS, ERC20_ABI, provider);
       const balance = await contract.balanceOf(walletAddress);
@@ -58,28 +59,28 @@ app.post('/', async (req, res) => {
       if (parseFloat(balanceInTokens) >= 50) {
         console.log('Balance sufficient, sending invite');
         await sendChannelInvite(walletAddress);
-        return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Request to Join'));
+        return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Done', 'https://via.placeholder.com/600x400?text=Invite+Sent'));
       } else {
         console.log('Insufficient balance');
-        return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Request to Join'));
+        return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Try Again', 'https://via.placeholder.com/600x400?text=Insufficient+Balance'));
       }
     } catch (error) {
       console.error('Error in POST handler:', error.message);
-      return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join'));
+      return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join', 'https://via.placeholder.com/600x400?text=Error'));
     }
   }
 });
 
 // Generate Frame HTML
-function generateFrame(message, buttonText) {
+function generateFrame(message, buttonText, imageUrl) {
   const postUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : DEPLOYED_URL;
-  console.log(`Generating frame with postUrl: ${postUrl}`);
+  console.log(`Generating frame with postUrl: ${postUrl}, image: ${imageUrl}`);
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png" />
+        <meta property="fc:frame:image" content="${imageUrl}" />
         <meta property="fc:frame:button:1" content="${buttonText}" />
         <meta property="fc:frame:post_url" content="${postUrl}" />
       </head>
