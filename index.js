@@ -3,10 +3,10 @@ const express = require('express');
 const Web3 = require('web3');
 const axios = require('axios');
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 // Primary domain for Vercel
-const DEPLOYED_URL = process.env.NODE_ENV === 'production' ? 'https://depe-membership-frame.vercel.app' : `http://localhost:${port}`;
+const DEPLOYED_URL = 'https://553d-91-65-203-172.ngrok-free.app';
 
 // Load and validate environment variables
 const DEPE_CONTRACT_ADDRESS = process.env.DEPE_CONTRACT_ADDRESS;
@@ -112,10 +112,6 @@ function generateFrame(message, buttonText, status = 'default') {
             imageUrl = 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png';
     }
 
-    const targetUrl = process.env.NODE_ENV === 'production' ? 
-        'https://depe-membership-frame.vercel.app/connect' : 
-        '/connect';
-
     return `
         <!DOCTYPE html>
         <html>
@@ -123,8 +119,8 @@ function generateFrame(message, buttonText, status = 'default') {
                 <meta property="fc:frame" content="vNext" />
                 <meta property="fc:frame:image" content="${imageUrl}" />
                 <meta property="fc:frame:button:1" content="${buttonText}" />
-                <meta property="fc:frame:button:1:action" content="link" />
-                <meta property="fc:frame:button:1:target" content="${targetUrl}" />
+                <meta property="fc:frame:button:1:action" content="post_redirect" />
+                <meta property="fc:frame:post_url" content="${DEPLOYED_URL}/connect" />
                 <title>DEPE Channel Access</title>
             </head>
             <body>

@@ -87,7 +87,16 @@
                     setStatus('Connected! Checking DEPE balance...');
                     
                     // Redirect to process endpoint with the address
-                    window.location.href = '/process?address=' + address;
+                    const response = await fetch(`/process?address=${address}`);
+                    const frameHtml = await response.text();
+                    
+                    // Extract the message from the frame HTML
+                    const messageMatch = frameHtml.match(/<div style="display: none;">(.*?)<\/div>/);
+                    if (messageMatch && messageMatch[1]) {
+                        setStatus(messageMatch[1]);
+                    } else {
+                        setStatus('Processing complete. You can close this window.');
+                    }
                 } else {
                     throw new Error('Please install MetaMask or another Web3 wallet');
                 }
