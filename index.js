@@ -37,29 +37,40 @@ app.get('/connect', (req, res) => {
     <html>
       <head>
         <title>Connect Wallet</title>
-        <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+        <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
       </head>
       <body>
         <h1>Connect Your EVM Wallet</h1>
         <button onclick="connectWallet()">Connect Wallet</button>
         <script>
-          async function connectWallet() {
-            if (window.ethereum) {
-              try {
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                const signer = provider.getSigner();
-                const address = await signer.getAddress();
-                window.location.href = '${DEPLOYED_URL}/process?address=' + address;
-              } catch (error) {
-                alert('Failed to connect wallet: ' + error.message);
-              }
-            } else {
-              alert('Please install an EVM wallet (e.g., MetaMask, Rainbow, Coinbase Wallet)!');
+          function connectWallet() {
+            if (typeof ethers === 'undefined') {
+              alert('ethers.js failed to load. Please try again.');
+              return;
             }
+            if (!window.ethereum) {
+              alert('Please install an EVM wallet (e.g., MetaMask, Rainbow, Coinbase Wallet)!');
+              return;
+            }
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            provider.send("eth_requestAccounts", [])
+              .then(accounts => {
+                const address = accounts[0];
+   console.log('Serving wallet connect page');
+                window.location.href = '${DEPLOYED_URL}/process?address=' + address;
+              })
+              .catch(error => {
+                alert('Failed to connect wallet: ' + error.message);
+              });
           }
-          // Auto-trigger wallet connection
-          window.onload = connectWallet;
+          // Auto-trigger wallet connection when ethers is loaded
+          window.onload = function() {
+            if (typeof ethers !== 'undefined') {
+              connectWallet();
+            } else {
+              alert('Loading wallet connection... If this persists, refresh the page.');
+            }
+          };
         </script>
       </body>
     </html>
