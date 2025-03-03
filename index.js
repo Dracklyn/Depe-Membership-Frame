@@ -32,49 +32,7 @@ app.get('/', (req, res) => {
 // Wallet Connect Endpoint
 app.get('/connect', (req, res) => {
   console.log('Serving wallet connect page');
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Connect Wallet</title>
-        <script src="/ethers.umd.min.js"></script>
-      </head>
-      <body>
-        <h1>Connect Your EVM Wallet</h1>
-        <button onclick="connectWallet()">Connect Wallet</button>
-        <script>
-          function connectWallet() {
-            if (typeof ethers === 'undefined') {
-              alert('ethers.js failed to load. Please refresh the page.');
-              return;
-            }
-            if (!window.ethereum) {
-              alert('Please install an EVM wallet (e.g., MetaMask, Rainbow, Coinbase Wallet)!');
-              return;
-            }
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            provider.send("eth_requestAccounts", [])
-              .then(accounts => {
-                const address = accounts[0];
-                window.location.href = '${DEPLOYED_URL}/process?address=' + address;
-              })
-              .catch(error => {
-                alert('Failed to connect wallet: ' + error.message);
-              });
-          }
-          // Auto-trigger wallet connection when ethers is loaded
-          window.onload = function() {
-            if (typeof ethers !== 'undefined') {
-              connectWallet();
-            } else {
-              console.error('ethers.js not loaded yet');
-              setTimeout(connectWallet, 500); // Retry after 500ms
-            }
-          };
-        </script>
-      </body>
-    </html>
-  `);
+  res.sendFile(__dirname + '/views/connect.html');
 });
 
 // Process Wallet Address and Return to Frame
