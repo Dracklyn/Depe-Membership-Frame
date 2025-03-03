@@ -29,46 +29,77 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/frame.html');
 });
 
-// Handle Frame POST requests
-app.post('/', async (req, res) => {
+// Wallet Connect Endpoint
+app.get('/connect', (req, res) => {
+  console.log('Serving wallet connect page');
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Connect Wallet</title>
+        <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+      </head>
+      <body>
+        <h1>Connect Your EVM Wallet</h1>
+        <button onclick="connectWallet()">Connect Wallet</button>
+        <script>
+          async function connectWallet() {
+            if (window.ethereum) {
+              try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                const signer = provider.getSigner();
+                const address = await signer.getAddress();
+                window.location.href = '${DEPLOYED_URL}/process?address=' + address;
+              } catch (error) {
+                alert('Failed to connect wallet: ' + error.message);
+              }
+            } else {
+              alert('Please install an EVM wallet (e.g., MetaMask, Rainbow, Coinbase Wallet)!');
+            }
+          }
+          // Auto-trigger wallet connection
+          window.onload = connectWallet;
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+// Process Wallet Address and Return to Frame
+app.get('/process', async (req, res) => {
+  const walletAddress = req.query.address;
+  console.log('Processing address:', walletAddress);
+
+  if (!walletAddress) {
+    return res.send(generateFrame('No wallet address provided. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png'));
+  }
+
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(DEGEN_RPC_URL);
+    const contract = new ethers.Contract(DEPE_CONTRACT_ADDRESS, ERC20_ABI, provider);
+    const balance = await contract.balanceOf(walletAddress);
+    const balanceInTokens = ethers.utils.formatUnits(balance, 18);
+    console.log(`Balance for ${walletAddress}: ${balanceInTokens} DEPE`);
+
+    if (parseFloat(balanceInTokens) >= 50) {
+      console.log('Balance sufficient, sending invite');
+      await sendChannelInvite(walletAddress);
+      return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Done', 'https://via.placeholder.com/600x400?text=Invite+Sent'));
+    } else {
+      console.log('Insufficient balance');
+      return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Try Again', 'https://via.placeholder.com/600x400?text=Insufficient+Balance'));
+    }
+  } catch (error) {
+    console.error('Error in /process:', error.message);
+    return res.send(generateFrame('Failed to process. Try again.', 'Request to Join', 'https://via.placeholder.com/600x400?text=Error'));
+  }
+});
+
+// Handle Frame POST requests (fallback)
+app.post('/', (req, res) => {
   console.log('POST request received:', JSON.stringify(req.body, null, 2));
-  const { untrustedData } = req.body;
-  const buttonId = untrustedData?.buttonIndex;
-  const walletAddress = untrustedData?.address;
-
-  if (!buttonId) {
-    console.log('No buttonId, returning error');
-    return res.send(generateFrame('Something went wrong. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png'));
-  }
-
-  if (buttonId === 1) {
-    console.log('Button 1 clicked, walletAddress:', walletAddress);
-    if (!walletAddress) {
-      console.log('No wallet address, prompting connection');
-      return res.send(generateFrame('Connect your wallet in Warpcast first!', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg'));
-    }
-
-    try {
-      console.log('Checking balance...');
-      const provider = new ethers.providers.JsonRpcProvider(DEGEN_RPC_URL);
-      const contract = new ethers.Contract(DEPE_CONTRACT_ADDRESS, ERC20_ABI, provider);
-      const balance = await contract.balanceOf(walletAddress);
-      const balanceInTokens = ethers.utils.formatUnits(balance, 18);
-      console.log(`Balance for ${walletAddress}: ${balanceInTokens} DEPE`);
-
-      if (parseFloat(balanceInTokens) >= 50) {
-        console.log('Balance sufficient, sending invite');
-        await sendChannelInvite(walletAddress);
-        return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Done', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg?text=Invite+Sent'));
-      } else {
-        console.log('Insufficient balance');
-        return res.send(generateFrame(`You hold ${balanceInTokens} DEPE. Need 50+ to join.`, 'Try Again', 'https://via.placeholder.com/600x400?text=Insufficient+Balance'));
-      }
-    } catch (error) {
-      console.error('Error in POST handler:', error.message);
-      return res.send(generateFrame('Failed to send invite. Try again.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1740849212/DEPE/oQhCpBKb_400x400_kafm2d.jpg?text=Error'));
-    }
-  }
+  return res.send(generateFrame('Please use the connect flow.', 'Request to Join', 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png'));
 });
 
 // Generate Frame HTML
@@ -82,7 +113,8 @@ function generateFrame(message, buttonText, imageUrl) {
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content="${imageUrl}" />
         <meta property="fc:frame:button:1" content="${buttonText}" />
-        <meta property="fc:frame:post_url" content="${postUrl}" />
+        <meta property="fc:frame:button:1:action" content="link" />
+        <meta property="fc:frame:button:1:target" content="${DEPLOYED_URL}/connect" />
       </head>
     </html>
   `;
