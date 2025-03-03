@@ -78,12 +78,11 @@ app.get('/process', async (req, res) => {
         if (parseFloat(balanceInTokens) >= 50) {
             console.log('Balance sufficient, sending invite');
             try {
-                const inviteResult = await sendChannelInvite(walletAddress);
-                console.log('Invite sent successfully:', inviteResult);
+                await sendChannelInvite(walletAddress);
                 return res.send(generateFrame('✅ Invite sent! Check your Warpcast notifications.', 'Done', 'success'));
             } catch (inviteError) {
                 console.error('Error sending invite:', inviteError);
-                return res.send(generateFrame('❌ Error sending invite. Make sure you have a Farcaster account.', 'Try Again', 'error'));
+                return res.send(generateFrame('❌ Error sending invite. Please try again.', 'Try Again', 'error'));
             }
         } else {
             console.log('Insufficient balance');
@@ -134,7 +133,7 @@ function generateFrame(message, buttonText, status = 'default') {
 async function sendChannelInvite(walletAddress) {
     console.log('Sending channel invite for wallet:', walletAddress);
     try {
-        // Send the channel invite using Warpcast API
+        // Send the channel invite
         const response = await axios.post(
             'https://api.warpcast.com/v2/channel-members',
             {
@@ -150,10 +149,10 @@ async function sendChannelInvite(walletAddress) {
             }
         );
 
-        console.log('Invite API response:', response.data);
+        console.log('Channel invite response:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error in sendChannelInvite:', error.response ? error.response.data : error.message);
+        console.error('Channel invite error:', error.response?.data || error.message);
         throw error;
     }
 }
