@@ -3,22 +3,19 @@ const express = require('express');
 const Web3 = require('web3');
 const axios = require('axios');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Primary domain for Vercel
 const DEPLOYED_URL = 'https://depe-membership-frame.vercel.app';
 
 // Load environment variables
-const DEPE_CHANNEL_URL = process.env.DEPE_CHANNEL_URL;
 const DEPE_CONTRACT_ADDRESS = process.env.DEPE_CONTRACT_ADDRESS;
 const MOD_FID = parseInt(process.env.MOD_FID);
-const MOD_PUBLIC_KEY = process.env.MOD_PUBLIC_KEY;
-const MOD_PRIVATE_KEY = process.env.MOD_PRIVATE_KEY;
 const FARCASTER_API_KEY = process.env.FARCASTER_API_KEY;
 const DEGEN_RPC_URL = process.env.DEGEN_RPC_URL;
 
 // Initialize Web3
-const web3 = new Web3(DEGEN_RPC_URL);
+const web3 = new Web3(new Web3.providers.HttpProvider(DEGEN_RPC_URL));
 
 // ERC-20 ABI for balanceOf function
 const ERC20_ABI = [
@@ -32,17 +29,15 @@ const ERC20_ABI = [
 ];
 
 app.use(express.json());
-app.use(express.static('views')); // Serve static files from 'views'
+app.use(express.static('views'));
 
 // Initial Frame
 app.get('/', (req, res) => {
-    console.log('Serving initial frame');
     res.sendFile(__dirname + '/views/frame.html');
 });
 
 // Wallet Connect Endpoint
 app.get('/connect', (req, res) => {
-    console.log('Serving wallet connect page');
     res.sendFile(__dirname + '/views/connect.html');
 });
 
@@ -67,36 +62,46 @@ app.get('/process', async (req, res) => {
         if (parseFloat(balanceInTokens) >= 50) {
             console.log('Balance sufficient, sending invite');
             try {
-                await sendChannelInvite(walletAddress);
-                return res.send(generateFrame('Invite sent! Check your Warpcast.', 'Done'));
+                const inviteResult = await sendChannelInvite(walletAddress);
+                console.log('Invite result:', inviteResult);
+                return res.send(generateFrame('✅ Invite sent! Check your Warpcast notifications.', 'Done', 'success'));
             } catch (inviteError) {
                 console.error('Invite error:', inviteError);
-                return res.send(generateFrame('Error sending invite. Please try again.', 'Try Again'));
+                return res.send(generateFrame('❌ Error sending invite. Make sure you have a Farcaster account.', 'Try Again', 'error'));
             }
         } else {
             console.log('Insufficient balance');
-            return res.send(generateFrame(`You need 50+ DEPE to join. Current balance: ${balanceInTokens} DEPE`, 'Try Again'));
+            return res.send(generateFrame(`❌ You need 50+ DEPE to join. Current balance: ${balanceInTokens} DEPE`, 'Try Again', 'warning'));
         }
     } catch (error) {
         console.error('Process error:', error);
-        return res.send(generateFrame('Error processing request. Please try again.', 'Try Again'));
+        return res.send(generateFrame('❌ Error checking DEPE balance. Please try again.', 'Try Again', 'error'));
     }
 });
 
-// Handle Frame POST requests (fallback)
-app.post('/', (req, res) => {
-    console.log('POST request received:', JSON.stringify(req.body, null, 2));
-    return res.send(generateFrame('Please use the connect flow.', 'Request to Join'));
-});
+// Generate Frame HTML with different status images
+function generateFrame(message, buttonText, status = 'default') {
+    let imageUrl;
+    switch (status) {
+        case 'success':
+            imageUrl = 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/success_banner.png';
+            break;
+        case 'error':
+            imageUrl = 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/error_banner.png';
+            break;
+        case 'warning':
+            imageUrl = 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/warning_banner.png';
+            break;
+        default:
+            imageUrl = 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png';
+    }
 
-// Generate Frame HTML
-function generateFrame(message, buttonText) {
     return `
         <!DOCTYPE html>
         <html>
             <head>
                 <meta property="fc:frame" content="vNext" />
-                <meta property="fc:frame:image" content="https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png" />
+                <meta property="fc:frame:image" content="${imageUrl}" />
                 <meta property="fc:frame:button:1" content="${buttonText}" />
                 <meta property="fc:frame:button:1:action" content="link" />
                 <meta property="fc:frame:button:1:target" content="${DEPLOYED_URL}/connect" />
@@ -109,38 +114,29 @@ function generateFrame(message, buttonText) {
     `;
 }
 
-// Send Channel Invite using Farcaster Hub and Warpcast API
+// Send Channel Invite using Warpcast API
 async function sendChannelInvite(walletAddress) {
     try {
-        const hubUrl = 'https://nemes.farcaster.xyz:2281';
-        const hubResponse = await axios.get(`${hubUrl}/v1/user-by-address?address=${walletAddress.toLowerCase()}`);
-        const userData = hubResponse.data;
-
-        if (!userData || !userData.fid) {
-            throw new Error('Could not find FID for this wallet address');
-        }
-        const userFid = userData.fid;
-        console.log(`FID for ${walletAddress}: ${userFid}`);
-
+        // Get the user's FID from their wallet address
         const response = await axios.post(
-            'https://api.warpcast.com/fc/channel-invites',
+            'https://api.warpcast.com/v2/channel-members',
             {
                 channelId: 'depe',
-                inviterFid: MOD_FID,
-                inviteFid: userFid,
-                role: 'member',
+                address: walletAddress.toLowerCase(),
+                role: 'member'
             },
             {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${FARCASTER_API_KEY}`,
-                },
+                    'Content-Type': 'application/json'
+                }
             }
         );
-        console.log('Invite sent successfully');
+
+        console.log('Invite sent successfully:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error sending invite:', error);
+        console.error('Error in sendChannelInvite:', error.response ? error.response.data : error.message);
         throw error;
     }
 }
