@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Connect Wallet - DEPE Channel Access</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -50,6 +50,7 @@
         #status {
             margin-top: 1rem;
             color: #666;
+            padding: 10px;
         }
         .error {
             color: #DC2626;
@@ -61,10 +62,7 @@
         <h1>Connect Your Wallet</h1>
         <p>Connect your wallet to verify your DEPE token balance and join the channel.</p>
         <div class="wallet-buttons">
-            <button onclick="connectWallet('metamask')">MetaMask</button>
-            <button onclick="connectWallet('coinbase')">Coinbase Wallet</button>
-            <button onclick="connectWallet('rainbow')">Rainbow</button>
-            <button onclick="connectWallet('zerion')">Zerion</button>
+            <button onclick="connectWallet()">Connect Wallet</button>
         </div>
         <div id="status"></div>
     </div>
@@ -76,35 +74,28 @@
             status.className = isError ? 'error' : '';
         };
 
-        async function connectWallet(walletType) {
+        async function connectWallet() {
             try {
-                if (typeof window.ethereum === 'undefined') {
-                    throw new Error('Please install an Ethereum wallet');
+                // Check if Web3 is injected by the browser (Metamask)
+                if (typeof window.ethereum !== 'undefined') {
+                    setStatus('Connecting to wallet...');
+                    
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const address = accounts[0];
+                    
+                    setStatus('Connected! Checking DEPE balance...');
+                    
+                    // Redirect to process endpoint with the address
+                    window.location.href = '/process?address=' + address;
+                } else {
+                    throw new Error('Please install MetaMask or another Web3 wallet');
                 }
-
-                setStatus('Connecting wallet...');
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                
-                // Request account access
-                const accounts = await provider.send('eth_requestAccounts', []);
-                const address = accounts[0];
-                
-                setStatus('Wallet connected! Redirecting...');
-                
-                // Redirect to process endpoint with the address
-                window.location.href = '/process?address=' + address;
             } catch (error) {
                 console.error('Connection error:', error);
                 setStatus(error.message || 'Failed to connect wallet', true);
             }
         }
-
-        // Check if ethers is loaded
-        window.addEventListener('load', () => {
-            if (typeof ethers === 'undefined') {
-                setStatus('Failed to load ethers.js. Please refresh the page.', true);
-            }
-        });
     </script>
 </body>
 </html>
