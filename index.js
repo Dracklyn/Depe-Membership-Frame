@@ -6,13 +6,24 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Primary domain for Vercel
-const DEPLOYED_URL = 'https://depe-membership-frame.vercel.app';
+const DEPLOYED_URL = process.env.NODE_ENV === 'production' ? 'https://depe-membership-frame.vercel.app' : `http://localhost:${port}`;
 
-// Load environment variables
+// Load and validate environment variables
 const DEPE_CONTRACT_ADDRESS = process.env.DEPE_CONTRACT_ADDRESS;
 const MOD_FID = parseInt(process.env.MOD_FID);
 const FARCASTER_API_KEY = process.env.FARCASTER_API_KEY;
 const DEGEN_RPC_URL = process.env.DEGEN_RPC_URL;
+
+// Validate required environment variables
+if (!DEPE_CONTRACT_ADDRESS) throw new Error('DEPE_CONTRACT_ADDRESS is required');
+if (!MOD_FID) throw new Error('MOD_FID is required');
+if (!FARCASTER_API_KEY) throw new Error('FARCASTER_API_KEY is required');
+if (!DEGEN_RPC_URL) throw new Error('DEGEN_RPC_URL is required');
+
+console.log('Initializing with configuration:');
+console.log('- DEPE Contract:', DEPE_CONTRACT_ADDRESS);
+console.log('- RPC URL:', DEGEN_RPC_URL);
+console.log('- MOD_FID:', MOD_FID);
 
 // Initialize Web3
 const web3 = new Web3(new Web3.providers.HttpProvider(DEGEN_RPC_URL));
@@ -33,11 +44,13 @@ app.use(express.static('views'));
 
 // Initial Frame
 app.get('/', (req, res) => {
+    console.log('Serving initial frame');
     res.sendFile(__dirname + '/views/frame.html');
 });
 
 // Wallet Connect Endpoint
 app.get('/connect', (req, res) => {
+    console.log('Serving wallet connect page');
     res.sendFile(__dirname + '/views/connect.html');
 });
 
@@ -47,14 +60,17 @@ app.get('/process', async (req, res) => {
     console.log('Processing address:', walletAddress);
 
     if (!walletAddress) {
+        console.log('No wallet address provided');
         return res.send(generateFrame('No wallet address provided', 'Try Again'));
     }
 
     try {
         // Create contract instance
+        console.log('Creating contract instance for:', DEPE_CONTRACT_ADDRESS);
         const contract = new web3.eth.Contract(ERC20_ABI, DEPE_CONTRACT_ADDRESS);
         
         // Get balance
+        console.log('Fetching balance for address:', walletAddress);
         const balance = await contract.methods.balanceOf(walletAddress).call();
         const balanceInTokens = web3.utils.fromWei(balance, 'ether');
         console.log(`Balance for ${walletAddress}: ${balanceInTokens} DEPE`);
@@ -63,10 +79,10 @@ app.get('/process', async (req, res) => {
             console.log('Balance sufficient, sending invite');
             try {
                 const inviteResult = await sendChannelInvite(walletAddress);
-                console.log('Invite result:', inviteResult);
+                console.log('Invite sent successfully:', inviteResult);
                 return res.send(generateFrame('✅ Invite sent! Check your Warpcast notifications.', 'Done', 'success'));
             } catch (inviteError) {
-                console.error('Invite error:', inviteError);
+                console.error('Error sending invite:', inviteError);
                 return res.send(generateFrame('❌ Error sending invite. Make sure you have a Farcaster account.', 'Try Again', 'error'));
             }
         } else {
@@ -96,6 +112,10 @@ function generateFrame(message, buttonText, status = 'default') {
             imageUrl = 'https://res.cloudinary.com/verifiedcreators/image/upload/v1739232925/DEPE/DEPE-Banner-Bg_bk79ec.png';
     }
 
+    const targetUrl = process.env.NODE_ENV === 'production' ? 
+        'https://depe-membership-frame.vercel.app/connect' : 
+        '/connect';
+
     return `
         <!DOCTYPE html>
         <html>
@@ -104,7 +124,7 @@ function generateFrame(message, buttonText, status = 'default') {
                 <meta property="fc:frame:image" content="${imageUrl}" />
                 <meta property="fc:frame:button:1" content="${buttonText}" />
                 <meta property="fc:frame:button:1:action" content="link" />
-                <meta property="fc:frame:button:1:target" content="${DEPLOYED_URL}/connect" />
+                <meta property="fc:frame:button:1:target" content="${targetUrl}" />
                 <title>DEPE Channel Access</title>
             </head>
             <body>
@@ -116,8 +136,9 @@ function generateFrame(message, buttonText, status = 'default') {
 
 // Send Channel Invite using Warpcast API
 async function sendChannelInvite(walletAddress) {
+    console.log('Sending channel invite for wallet:', walletAddress);
     try {
-        // Get the user's FID from their wallet address
+        // Send the channel invite using Warpcast API
         const response = await axios.post(
             'https://api.warpcast.com/v2/channel-members',
             {
@@ -133,7 +154,7 @@ async function sendChannelInvite(walletAddress) {
             }
         );
 
-        console.log('Invite sent successfully:', response.data);
+        console.log('Invite API response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error in sendChannelInvite:', error.response ? error.response.data : error.message);
@@ -141,6 +162,12 @@ async function sendChannelInvite(walletAddress) {
     }
 }
 
+// Start server
 app.listen(port, () => {
-    console.log(`Frame server running at http://localhost:${port}`);
+    console.log(`
+Server started successfully:
+- Environment: ${process.env.NODE_ENV || 'development'}
+- Port: ${port}
+- URL: ${DEPLOYED_URL}
+    `);
 });
