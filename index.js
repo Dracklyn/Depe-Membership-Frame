@@ -9,7 +9,7 @@ const port = 3000;
 const DEPLOYED_URL = 'https://depe-membership-frame.vercel.app';
 
 app.use(express.json());
-app.use(express.static('views'));
+app.use(express.static('views')); // Serve static files from 'views'
 
 // Load environment variables
 const DEPE_CHANNEL_URL = process.env.DEPE_CHANNEL_URL;
@@ -37,7 +37,7 @@ app.get('/connect', (req, res) => {
     <html>
       <head>
         <title>Connect Wallet</title>
-        <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+        <script src="/ethers.umd.min.js"></script>
       </head>
       <body>
         <h1>Connect Your EVM Wallet</h1>
@@ -45,7 +45,7 @@ app.get('/connect', (req, res) => {
         <script>
           function connectWallet() {
             if (typeof ethers === 'undefined') {
-              alert('ethers.js failed to load. Please try again.');
+              alert('ethers.js failed to load. Please refresh the page.');
               return;
             }
             if (!window.ethereum) {
@@ -56,7 +56,6 @@ app.get('/connect', (req, res) => {
             provider.send("eth_requestAccounts", [])
               .then(accounts => {
                 const address = accounts[0];
-   console.log('Serving wallet connect page');
                 window.location.href = '${DEPLOYED_URL}/process?address=' + address;
               })
               .catch(error => {
@@ -68,7 +67,8 @@ app.get('/connect', (req, res) => {
             if (typeof ethers !== 'undefined') {
               connectWallet();
             } else {
-              alert('Loading wallet connection... If this persists, refresh the page.');
+              console.error('ethers.js not loaded yet');
+              setTimeout(connectWallet, 500); // Retry after 500ms
             }
           };
         </script>
