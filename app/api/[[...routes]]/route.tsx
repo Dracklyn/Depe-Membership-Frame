@@ -32,11 +32,7 @@ app.frame("/join", async (c) => {
 	if (isMemeberRes.result.members.length > 0) {
 		return c.res({
 			image: config.alreadyMemberImage,
-			intents: [
-				<Button.Link href="https://github.com/PinataCloud/channel-frame">
-					Source Code
-				</Button.Link>,
-			],
+			
 		});
 	}
 
@@ -72,11 +68,7 @@ app.frame("/join", async (c) => {
 	if (joinRes.result && joinRes.result.success) {
 		return c.res({
 			image: config.successImage,
-			intents: [
-				<Button.Link href="https://github.com/PinataCloud/channel-frame">
-					Source Code
-				</Button.Link>,
-			],
+			
 		});
 	}
 
