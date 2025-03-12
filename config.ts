@@ -11,6 +11,4 @@ export const config = {
 		"https://res.cloudinary.com/verifiedcreators/image/upload/v1741078437/DEPE/Frame_919_kz6aj1.png",
 	errorImage:
 		"https://res.cloudinary.com/verifiedcreators/image/upload/v1741078437/DEPE/Frame_920_e4lce6.png",
-	insufficientBalanceImage:
-		"https://res.cloudinary.com/verifiedcreators/image/upload/v1741078437/DEPE/Frame_921_du7jky.png",
 };
