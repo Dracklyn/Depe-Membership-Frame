@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 		"fc:frame:button:1:action": "post",
 		"fc:frame:button:1:target": "https://depe-membership-frame-s56f.vercel.app//api/join",
 
-	},
+	}
 };
 
 export default function RootLayout({
